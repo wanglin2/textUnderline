@@ -1184,7 +1184,7 @@ export default {
      */
     walk (node, callback = () => {}) {
       callback(node)
-      if (node.childNodes) {
+      if (node && node.childNodes) {
         for (let i = 0; i < node.childNodes.length; i++) {
           this.walk(node.childNodes[i], callback)
         }
@@ -1342,7 +1342,7 @@ export default {
           if (end) {
             return
           }
-          if (node.nodeType === 3) {
+          if (node && node.nodeType === 3) {
             let nodeTextLength = node.nodeValue.length
             if (len + nodeTextLength > _offset) {
               let startOffset = item.offset - len
