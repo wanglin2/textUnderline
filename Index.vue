@@ -1166,13 +1166,11 @@ export default {
       let markNodes = document.querySelectorAll('.mark_id_' + this.clickId)
       for (let i = 0; i < markNodes.length; i++) {
         let item = markNodes[i]
-        if (item.children[0]) {
-          let node = item.children[0].cloneNode(true)
-          item.parentNode.replaceChild(node, item)
-        } else {
-          let textNode = document.createTextNode(item.textContent)
-          item.parentNode.replaceChild(textNode, item)
+        let fregment = document.createDocumentFragment()
+        for (let j = 0; j < item.childNodes.length; j++) {
+          fregment.appendChild(item.childNodes[j].cloneNode(true))
         }
+        item.parentNode.replaceChild(fregment, item)
       }
       this.serializeData = this.serializeData.filter((item) => {
         return item.id !== this.clickId
@@ -1235,16 +1233,11 @@ export default {
         endNode = document.createTextNode(node.nodeValue.slice(endOffset))
       }
       startNode && fragment.appendChild(startNode)
-      node.nodeValue
-        .slice(startOffset, endOffset)
-        .split('')
-        .forEach((text) => {
-          let textNode = document.createElement('span')
-          textNode.className = 'markLine mark_id_' + id
-          textNode.setAttribute('data-id', id)
-          textNode.textContent = text
-          fragment.appendChild(textNode)
-        })
+      let textNode = document.createElement('span')
+      textNode.className = 'markLine mark_id_' + id
+      textNode.setAttribute('data-id', id)
+      textNode.textContent = node.nodeValue.slice(startOffset, endOffset)
+      fragment.appendChild(textNode)
       endNode && fragment.appendChild(endNode)
       node.parentNode.replaceChild(fragment, node)
     },
@@ -1265,6 +1258,7 @@ export default {
           tagName,
           index,
           offset,
+          length: markNode.textContent.length,
           id: markNode.getAttribute('data-id')
         })
       })
@@ -1342,18 +1336,25 @@ export default {
         let wrapNode = root.getElementsByTagName(item.tagName)[item.index]
         let len = 0
         let end = false
+        let _offset = item.offset
+        let _length = item.length
         this.walk(wrapNode, (node) => {
           if (end) {
             return
           }
           if (node.nodeType === 3) {
-            if (len + node.nodeValue.length > item.offset) {
+            let nodeTextLength = node.nodeValue.length
+            if (len + nodeTextLength > _offset) {
               let startOffset = item.offset - len
-              let endOffset = startOffset + 1
+              let endOffset = startOffset + (nodeTextLength - startOffset >= _length ? _length : nodeTextLength - startOffset)
               this.replaceTextNode(node, item.id, startOffset, endOffset)
-              end = true
+              _offset = 0
+              _length = _length - (nodeTextLength - startOffset)
+              if (_length <= 0) {
+                end = true
+              }
             }
-            len += node.nodeValue.length
+            len += nodeTextLength
           }
         })
       })
@@ -1394,11 +1395,13 @@ export default {
         e.preventDefault()
         this.clickId = tar.getAttribute('data-id')
         let markNodes = document.querySelectorAll('.mark_id_' + this.clickId)
+        let startContainer = markNodes[0].firstChild
+        let endContainer = markNodes[markNodes.length - 1].lastChild
         this.range = document.createRange()
-        this.range.setStart(markNodes[0], 0)
+        this.range.setStart(startContainer, 0)
         this.range.setEnd(
-          markNodes[markNodes.length - 1],
-          markNodes[markNodes.length - 1].textContent.length
+          endContainer,
+          endContainer.nodeValue.length
         )
         this.tipText = '取消划线'
         this.setTip(this.range)
